@@ -112,3 +112,33 @@ def test_run_entry_point(temp_repo, monkeypatch):
     assert code == 0
     assert called["command"] == ["python3", "main.py"]
     assert output == "ran"
+
+
+def test_discover_importable_packages(temp_repo):
+    (temp_repo / "pkg").mkdir()
+    (temp_repo / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+    (temp_repo / "not_a_package").mkdir()
+
+    sandbox = DummySandbox(str(temp_repo))
+    runner = Runner(str(temp_repo), sandbox)
+
+    assert runner.discover_importable_packages() == ["pkg"]
+
+
+def test_import_package_invokes_python(monkeypatch, temp_repo):
+    sandbox = DummySandbox(str(temp_repo))
+    sandbox.python_path = "python3"
+    runner = Runner(str(temp_repo), sandbox)
+
+    called = {}
+
+    def fake_run_command(command):
+        called["command"] = command
+        return 0, "ok"
+
+    monkeypatch.setattr(runner, "_run_command", fake_run_command)
+    code, output = runner.import_package("pkg")
+
+    assert code == 0
+    assert output == "ok"
+    assert called["command"] == ["python3", "-c", "import pkg"]

@@ -23,6 +23,9 @@ class StubRunner:
         self.entry_point = None
         self.install_index = 0
         self.run_index = 0
+        self.packages = []
+        self.import_attempts = []
+        self.import_index = 0
 
     def find_requirements(self):
         return self.requirements
@@ -40,9 +43,18 @@ class StubRunner:
         self.run_index += 1
         return result
 
+    def discover_importable_packages(self):
+        return self.packages
+
+    def import_package(self, package):
+        result = self.import_attempts[self.import_index]
+        self.import_index += 1
+        return result
+
     def reset(self):
         self.install_index = 0
         self.run_index = 0
+        self.import_index = 0
 
 
 class StubFileHandler:
@@ -143,12 +155,38 @@ def test_heal_runtime_success(healer, tmp_path):
 
 def test_heal_runtime_no_entry_point(healer):
     healer.runner.entry_point = None
+    healer.runner.packages = []
     assert healer._heal_runtime() is True
 
 
 def test_heal_runtime_failure_without_fix(healer):
     healer.runner.entry_point = "main.py"
     healer.runner.run_attempts = [(1, "traceback")]
+    healer.runner.reset()
+    healer.code_agent.suggestions = []
+
+    assert healer._heal_runtime() is False
+
+
+def test_heal_runtime_import_packages_success(healer, tmp_path):
+    file_to_patch = str(tmp_path / "pkg" / "__init__.py")
+    healer.runner.entry_point = None
+    healer.runner.packages = ["pkg"]
+    healer.runner.import_attempts = [
+        (1, "ImportError"),
+        (0, "ok"),
+    ]
+    healer.runner.reset()
+    healer.code_agent.suggestions = [(file_to_patch, "patched = True")]
+
+    assert healer._heal_runtime() is True
+    assert healer.file_handler.write_calls[-1] == (file_to_patch, "patched = True")
+
+
+def test_heal_runtime_import_packages_failure_without_fix(healer):
+    healer.runner.entry_point = None
+    healer.runner.packages = ["pkg"]
+    healer.runner.import_attempts = [(1, "ImportError")]
     healer.runner.reset()
     healer.code_agent.suggestions = []
 
