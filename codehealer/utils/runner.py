@@ -47,3 +47,20 @@ class Runner:
     def run_entry_point(self, entry_point_filename: str) -> tuple[int, str]:
         python_exe = self.sandbox.get_python_executable()
         return self._run_command([python_exe, entry_point_filename])
+
+    def discover_importable_packages(self) -> list[str]:
+        """Return a sorted list of top-level packages inside the repository."""
+        packages: list[str] = []
+        for entry in os.listdir(self.repo_path):
+            entry_path = os.path.join(self.repo_path, entry)
+            if not os.path.isdir(entry_path):
+                continue
+            init_file = os.path.join(entry_path, "__init__.py")
+            if os.path.exists(init_file):
+                packages.append(entry)
+        return sorted(packages)
+
+    def import_package(self, package_name: str) -> tuple[int, str]:
+        """Attempt to import the given package inside the sandbox."""
+        python_exe = self.sandbox.get_python_executable()
+        return self._run_command([python_exe, "-c", f"import {package_name}"])
