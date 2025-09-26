@@ -1,7 +1,7 @@
 import subprocess
 import os
 from typing import List, Optional
-from .sandbox import SandboxManager
+from codehealer.utils.sandbox import SandboxManager
 
 class Runner:
     """Handles running external commands within a specified sandbox."""
@@ -11,18 +11,38 @@ class Runner:
         self.sandbox = sandbox
 
     def _run_command(self, command: List[str]) -> tuple[int, str]:
-        """A generic method to run a command and capture its output."""
+        """A generic method to run a command, stream its output, and capture it."""
+        print(f"[runner] $ {' '.join(command)}")
         try:
-            result = subprocess.run(
+            # Use Popen to stream output in real-time.
+            proc = subprocess.Popen(
                 command,
                 cwd=self.repo_path,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                timeout=180
+                encoding='utf-8',
+                errors='replace'
             )
-            return result.returncode, f"{result.stdout}\n{result.stderr}"
+            
+            output_lines = []
+            # Read and print output line by line.
+            for line in proc.stdout:
+                print(line, end="")
+                output_lines.append(line)
+            
+            # Wait for process to finish and get return code.
+            return_code = proc.wait()
+            return return_code, "".join(output_lines)
+
+        except FileNotFoundError:
+            error_msg = f"Error: Command not found: {command[0]}"
+            print(error_msg)
+            return -1, error_msg
         except Exception as e:
-            return -1, f"Failed to execute command '{' '.join(command)}': {e}"
+            error_msg = f"Error: Failed to execute command '{' '.join(command)}': {e}"
+            print(error_msg)
+            return -1, error_msg
 
     def find_requirements(self) -> Optional[str]:
         path = os.path.join(self.repo_path, 'requirements.txt')

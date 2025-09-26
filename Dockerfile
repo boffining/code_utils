@@ -13,7 +13,7 @@ COPY run_in_container.py /app/run_in_container.py
 # This makes it importable by other scripts in the container.
 COPY pyproject.toml /app/
 RUN pip install -e .
-RUN pip install --no-cache-dir pytest
+RUN pip install --no-cache-dir pytest langgraph
 
 # Copy codehealer runtime
 COPY run_in_container.py /app/run_in_container.py

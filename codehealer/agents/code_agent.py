@@ -2,8 +2,8 @@ import re
 import os
 from typing import Optional, Tuple, List
 
-from .base_agent import BaseAgent
-from ..utils.file_handler import FileHandler
+from codehealer.agents.base_agent import BaseAgent
+from codehealer.utils.file_handler import FileHandler
 
 class CodeAgent(BaseAgent):
     """An agent specializing in fixing Python runtime errors."""

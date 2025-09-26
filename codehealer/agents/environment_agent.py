@@ -1,4 +1,4 @@
-from .base_agent import BaseAgent
+from codehealer.agents.base_agent import BaseAgent
 
 class EnvironmentAgent(BaseAgent):
     """An agent specializing in fixing dependency installation errors."""
