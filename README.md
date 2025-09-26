@@ -9,7 +9,7 @@ repairs the code, and hands back a fixed archive—no manual debugging required.
 ## 🚀 Highlights
 - **Container-first safety** – All healing happens inside the `codehealer-agent` Docker image.
 - **Bring-your-own project** – Feed in any zipped Python repository and get a patched version back.
-- **Minimal host setup** – You only need Python 3.10+, Docker, and an OpenAI API key.
+- **Minimal host setup** – You only need Python 3.9+, Docker, and an OpenAI API key.
 - **Zip-in / Zip-out workflow** – Perfect for CI pipelines and reproducible fixes.
 
 ---
@@ -25,7 +25,7 @@ repairs the code, and hands back a fixed archive—no manual debugging required.
 
 ## 🛠️ Quickstart (6 steps)
 1. **Install prerequisites**
-   - Python 3.10 or newer
+   - Python 3.9 or newer
    - Docker Engine running locally
    - An `OPENAI_API_KEY`
 

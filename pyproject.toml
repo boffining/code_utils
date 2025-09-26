@@ -3,7 +3,7 @@ name = "codehealer"
 version = "2.1.0"
 description = "An autonomous agent to resolve environment and runtime errors in Python repos."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = [
     "openai",
 ]

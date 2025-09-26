@@ -1,5 +1,5 @@
 # Use a slim, official Python image as the base
-FROM python:3.11-slim-bookworm
+FROM python:3.9-slim-bookworm
 
 # Set the working directory inside the container
 WORKDIR /app

@@ -2,6 +2,7 @@ import os
 import sys
 import types
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -36,7 +37,7 @@ class DummyOpenAI:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.response_content = ""
-        self.raise_error: Exception | None = None
+        self.raise_error: Optional[Exception] = None
         self.chat = DummyChat(self)
 
 
