@@ -9,7 +9,7 @@ from codehealer.core.graph import build_graph, AgentState
 class Healer:
     """Orchestrates the healing process using a LangGraph-defined workflow."""
 
-    def __init__(self, repo_path: str, max_iterations: int = 10):
+    def __init__(self, repo_path: str, max_iterations: int = 50):
         self.repo_path = repo_path
         self.max_iterations = max_iterations
         
@@ -30,7 +30,11 @@ class Healer:
         the iterative loop until success or failure.
         """
         initial_state: AgentState = {
-            "healer": self,
+            "sandbox": self.sandbox,
+            "runner": self.runner,
+            "file_handler": self.file_handler,
+            "env_agent": self.env_agent,
+            "code_agent": self.code_agent,
             "iteration": 0,
             "max_iterations": self.max_iterations,
             "log": "",

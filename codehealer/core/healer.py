@@ -9,7 +9,7 @@ from codehealer.core.graph import build_graph, AgentState
 class Healer:
     """Orchestrates the healing process using a LangGraph-defined workflow."""
 
-    def __init__(self, repo_path: str, max_iterations: int = 10):
+    def __init__(self, repo_path: str, max_iterations: int = 50):
         self.repo_path = repo_path
         self.max_iterations = max_iterations
         
