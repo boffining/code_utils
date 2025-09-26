@@ -5,11 +5,17 @@ import tempfile
 import shutil
 import zipfile
 
-def run_command(command, error_message):
-    """Helper function to run a subprocess command and handle errors."""
+def run_command(command, error_message, cwd=None):
+    """Helper to run a subprocess command and handle errors."""
     try:
         print(f"Executing: {' '.join(command)}")
-        subprocess.run(command, check=True, capture_output=True, text=True)
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+        )
     except subprocess.CalledProcessError as e:
         print(f"ERROR: {error_message}")
         print(f"STDOUT: {e.stdout}")
@@ -59,19 +65,20 @@ def main():
         # 2. Build the Docker image
         image_tag = "codehealer-agent:latest"
         build_command = ["docker", "build", "-t", image_tag, "."]
-        run_command(build_command, "Failed to build Docker image.")
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        run_command(build_command, "Failed to build Docker image.", cwd=project_root)
 
         # 3. Run the container, mounting the unzipped code
         # The '--rm' flag automatically removes the container when it exits.
         absolute_repo_path = os.path.abspath(repo_path)
-        run_command = [
+        container_command = [
             "docker", "run", "--rm",
             "-v", f"{absolute_repo_path}:/workspace/repo",
             "-e", f"OPENAI_API_KEY={api_key}",
             image_tag,
             "--path", "/workspace/repo"
         ]
-        run_command(run_command, "The healing process inside the container failed.")
+        run_command(container_command, "The healing process inside the container failed.")
 
         # 4. Zip up the fixed repository
         base_name, _ = os.path.splitext(os.path.basename(args.zip_path))

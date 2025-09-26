@@ -1,5 +1,5 @@
 CodeHealer 3.0: Containerized Autonomous Python Healer 📦✨
-CodeHealer is an autonomous AI agent that makes any Python repository runnable. This version operates within a secure Docker container, providing maximum isolation and safety. It takes a zipped repository as input, heals it, and returns a new zipped file with the fixes.
+CodeHealer is an autonomous AI agent that makes any Python repository runnable. This version operates within a secure Docker container, providing maximum isolation and safety. It takes a zipped repository as input, heals it, and returns a new zipped file with the fixes. The host orchestrator requires Python 3.10 or newer.
 
 Key Features
 Containerized Sandboxing: All operations—dependency installation and code execution—happen inside a Docker container. This provides full filesystem and process isolation, ensuring the tool cannot affect your host machine.

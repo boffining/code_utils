@@ -48,8 +48,11 @@ class CodeAgent(BaseAgent):
                 abs_filepath = os.path.normpath(os.path.join(self.repo_path, relative_filepath))
                 
                 if not abs_filepath.startswith(self.repo_path):
-                     print(f"Error: Agent suggested a path outside the repository: {relative_filepath}")
-                     return None
+                    print(
+                        "Error: Agent suggested a path outside the repository: "
+                        f"{relative_filepath}"
+                    )
+                    return None
                 
                 code = code_match.group(1).strip()
                 return abs_filepath, code
