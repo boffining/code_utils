@@ -2,3 +2,28 @@
 examples/hello_codehealer_target.zip
 examples/hello_codehealer_target_fixed.zip
 healed_repo/
+
+# Python build artifacts and virtual environments
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Jupyter notebook and editor caches
+.ipynb_checkpoints/
+.ipynb_tracking/
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
+
+# Local sandbox environments created by CodeHealer
+.codehealer_venv/

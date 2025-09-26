@@ -75,6 +75,23 @@ matches the intended behavior.
 
 ---
 
+## 📓 Interactive Examples
+Explore the end-to-end workflow inside Jupyter with the notebook at
+`examples/tutorials/codehealer_interactive_tutorial.ipynb`. It contains:
+
+- A **Quickstart** walk-through that mirrors the CLI workflow shown above.
+- A **deep dive** into the Environment and Code agents, with prompts you can adapt to your own repos.
+- An **extension sketch** that demonstrates how to subclass agents and plug them back into the Healer orchestrator.
+
+Launch it with Jupyter Lab or VS Code to experiment interactively:
+
+```bash
+pip install notebook
+jupyter lab examples/tutorials/codehealer_interactive_tutorial.ipynb
+```
+
+---
+
 ## 📂 Repository Layout
 ```
 .
@@ -86,6 +103,18 @@ matches the intended behavior.
 ├── Dockerfile               # Defines the codehealer-agent runtime image
 └── pyproject.toml           # Python package metadata (only depends on `openai`)
 ```
+
+---
+
+## ✅ Running the Test Suite
+Every core function is covered by unit tests. Install the development dependencies and run them with
+
+```bash
+pip install pytest
+pytest
+```
+
+The tests stub the OpenAI client, so they run quickly without network access.
 
 ---
 
