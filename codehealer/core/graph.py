@@ -1,7 +1,7 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, List
 from langgraph.graph import StateGraph, END
+import os
 
-# Import the components that will be in the state, breaking the circular dependency
 from codehealer.utils.sandbox import SandboxManager
 from codehealer.utils.runner import Runner
 from codehealer.utils.file_handler import FileHandler
@@ -9,47 +9,52 @@ from codehealer.agents.environment_agent import EnvironmentAgent
 from codehealer.agents.code_agent import CodeAgent
 
 class AgentState(TypedDict):
-    """Defines the state of the agent at any point in the graph."""
-    # The tools and components are now first-class citizens of the state
     sandbox: SandboxManager
     runner: Runner
     file_handler: FileHandler
     env_agent: EnvironmentAgent
     code_agent: CodeAgent
-
-    # Metadata for the run
     iteration: int
     max_iterations: int
     log: str
     is_success: bool
     phase: str
+    attempt_history: List[str]
 
 def setup_sandbox_node(state: AgentState) -> dict:
-    """Node: Creates the sandboxed virtual environment."""
     sandbox = state["sandbox"]
     print("\n--- Phase 1: Setting up Sandbox ---")
     sandbox.create()
     print("✅ Sandbox created.")
-    # Return only the keys that are being updated
-    return {
-        "iteration": 0,
-        "phase": "environment"
-    }
+    return {"iteration": 0, "phase": "environment", "attempt_history": []}
 
 def heal_environment_node(state: AgentState) -> dict:
-    """Node: Attempts to install dependencies, healing them if necessary."""
     runner = state["runner"]
     file_handler = state["file_handler"]
     env_agent = state["env_agent"]
     
     iteration = state['iteration'] + 1
-    update = {"iteration": iteration}
+    attempt_history = state['attempt_history']
+    update = {"iteration": iteration, "attempt_history": attempt_history}
     print(f"\n--- Phase 2: Resolving Environment (Attempt {iteration}) ---")
     
     requirements_path = runner.find_requirements()
     if not requirements_path:
-        print("No requirements.txt found. Skipping to runtime analysis.")
-        update.update({"is_success": True, "phase": "runtime"})
+        print("`requirements.txt` not found. Asking EnvironmentAgent to generate one...")
+        all_files = file_handler.list_all_python_files(runner.repo_path)
+        source_code_str = "\n".join(f"--- FILE: {path} ---\n{content}" for path, content in all_files.items())
+        
+        suggestion = env_agent.get_suggestion(source_code_str, None, attempt_history)
+        
+        if suggestion:
+            new_req_path = os.path.join(runner.repo_path, 'requirements.txt')
+            print(f"Applying suggested fix to create {os.path.basename(new_req_path)}...")
+            file_handler.write_file(new_req_path, suggestion)
+            attempt_history.append(suggestion)
+            update["is_success"] = False # Loop back to try installing the new file
+        else:
+            print("❌ Agent provided no suggestion. Cannot create environment.")
+            update.update({"is_success": False, "phase": "fail"})
         return update
 
     exit_code, log = runner.install_dependencies()
@@ -57,16 +62,17 @@ def heal_environment_node(state: AgentState) -> dict:
 
     if exit_code == 0:
         print("✅ Dependencies installed successfully.")
-        update.update({"is_success": True, "phase": "runtime"})
+        update.update({"is_success": True, "phase": "runtime", "attempt_history": []})
     else:
         print("Dependency installation failed. Consulting EnvironmentAgent...")
         original_reqs = file_handler.read_file(requirements_path)
-        suggestion = env_agent.get_suggestion(log, original_reqs)
+        suggestion = env_agent.get_suggestion(log, original_reqs, attempt_history)
         
         if suggestion:
             print("Applying suggested fix to requirements.txt...")
             file_handler.write_file(requirements_path, suggestion)
-            update["is_success"] = False # Stay in this phase to retry
+            attempt_history.append(suggestion)
+            update["is_success"] = False
         else:
             print("❌ Agent provided no suggestion. Cannot heal environment.")
             update.update({"is_success": False, "phase": "fail"})
@@ -74,19 +80,31 @@ def heal_environment_node(state: AgentState) -> dict:
     return update
 
 def heal_runtime_node(state: AgentState) -> dict:
-    """Node: Attempts to run the code, healing runtime errors if they occur."""
     runner = state["runner"]
     code_agent = state["code_agent"]
     file_handler = state["file_handler"]
     
     iteration = state['iteration'] + 1
-    update = {"iteration": iteration}
+    attempt_history = state['attempt_history']
+    update = {"iteration": iteration, "attempt_history": attempt_history}
     print(f"\n--- Phase 3: Resolving Runtime Errors (Attempt {iteration}) ---")
 
     entry_point = runner.find_entry_point()
     if not entry_point:
-        print("Could not find a main entry point. Checking for importable packages.")
-        update["is_success"] = True
+        print("Entry point not found. Asking CodeAgent to generate one...")
+        status_log = "No entry point found (e.g., main.py, app.py). Please analyze the repository and create one."
+        fixes = code_agent.get_suggestion(status_log, attempt_history)
+        if fixes:
+            all_new_content = []
+            for file_to_patch, new_content in fixes:
+                print(f"Applying suggested change to create/update {os.path.basename(file_to_patch)}...")
+                file_handler.write_file(file_to_patch, new_content)
+                all_new_content.append(new_content)
+            attempt_history.append("\n---\n".join(all_new_content))
+            update["is_success"] = False # Loop back to try running the new entry point
+        else:
+            print("Could not generate an entry point. Checking for importable packages.")
+            update["is_success"] = True # Move on to package import checks
         return update
 
     exit_code, log = runner.run_entry_point(entry_point)
@@ -97,13 +115,15 @@ def heal_runtime_node(state: AgentState) -> dict:
         update["is_success"] = True
     else:
         print("Runtime error detected. Consulting CodeAgent...")
-        fix = code_agent.get_suggestion(log)
-
-        if fix:
-            file_to_patch, new_content = fix
-            print(f"Applying suggested fix to {file_to_patch}...")
-            file_handler.write_file(file_to_patch, new_content)
-            update["is_success"] = False # Stay in this phase to retry
+        fixes = code_agent.get_suggestion(log, attempt_history)
+        if fixes:
+            all_new_content = []
+            for file_to_patch, new_content in fixes:
+                print(f"Applying suggested fix to {os.path.basename(file_to_patch)}...")
+                file_handler.write_file(file_to_patch, new_content)
+                all_new_content.append(new_content)
+            attempt_history.append("\n---\n".join(all_new_content))
+            update["is_success"] = False
         else:
             print("❌ Agent could not determine a fix for the runtime error.")
             update.update({"is_success": False, "phase": "fail"})
@@ -111,49 +131,33 @@ def heal_runtime_node(state: AgentState) -> dict:
     return update
 
 def decide_next_step(state: AgentState) -> str:
-    """Edge: Decides the next node to visit based on the current state."""
     if state["phase"] == "fail":
         return "fail"
-        
     if state["iteration"] >= state["max_iterations"]:
         print("\n❌ Reached maximum iterations. Aborting.")
         return "fail"
-
     if state["phase"] == "environment":
         return "heal_environment"
-    
     if state["phase"] == "runtime":
-        if state["is_success"]:
-            # If runtime healing was successful, we're done.
-            return "finish"
-        else:
-            # If it failed but a fix was applied, retry.
-            return "heal_runtime"
-    
-    # This should not be reached
+        return "heal_runtime" if not state["is_success"] else "finish"
     return "fail"
 
 def build_graph():
-    """Builds the LangGraph workflow."""
     workflow = StateGraph(AgentState)
-    
-    # Add nodes
     workflow.add_node("setup_sandbox", setup_sandbox_node)
     workflow.add_node("heal_environment", heal_environment_node)
     workflow.add_node("heal_runtime", heal_runtime_node)
     workflow.add_node("finish", lambda state: print("\n✨ Repository healed successfully!"))
     workflow.add_node("fail", lambda state: print("\n❌ Healing process failed."))
 
-    # Define edges
     workflow.set_entry_point("setup_sandbox")
     workflow.add_edge("setup_sandbox", "heal_environment")
     
     workflow.add_conditional_edges(
         "heal_environment",
-        lambda state: "heal_runtime" if state["is_success"] else decide_next_step(state),
+        lambda s: "heal_runtime" if s["is_success"] else decide_next_step(s),
         {"heal_runtime": "heal_runtime", "heal_environment": "heal_environment", "fail": "fail"}
     )
-    
     workflow.add_conditional_edges(
         "heal_runtime",
         decide_next_step,

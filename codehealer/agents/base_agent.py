@@ -16,12 +16,14 @@ class BaseAgent:
         """Sends a query to the LLM and returns the response."""
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-5",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.1,
+                reasoning={"effort":"high"},
+                text={"verbosity":"high"},
+                #temperature=0.1,
             )
             return response.choices[0].message.content
         except Exception as e:
