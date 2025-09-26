@@ -1,6 +1,6 @@
 import os
 import time
-from ..agents.env_agent import EnvironmentAgent
+from ..agents.environment_agent import EnvironmentAgent
 from ..agents.code_agent import CodeAgent
 from ..utils.runner import Runner
 from ..utils.file_handler import FileHandler
