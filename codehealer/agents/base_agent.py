@@ -21,8 +21,10 @@ class BaseAgent:
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                reasoning={"effort":"high"},
-                text={"verbosity":"high"},
+                reasoning_effort="high",
+                verbosity="medium",
+                max_tokens=50000,
+                # streaming="true",
                 #temperature=0.1,
             )
             return response.choices[0].message.content
