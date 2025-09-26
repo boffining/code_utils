@@ -1,82 +1,98 @@
-CodeHealer 3.0: Containerized Autonomous Python Healer 📦✨
-CodeHealer is an autonomous AI agent that makes any Python repository runnable. This version operates within a secure Docker container, providing maximum isolation and safety. It takes a zipped repository as input, heals it, and returns a new zipped file with the fixes. The host orchestrator requires Python 3.10 or newer.
+# CodeHealer 3.0 🩺⚙️
 
-Key Features
-Containerized Sandboxing: All operations—dependency installation and code execution—happen inside a Docker container. This provides full filesystem and process isolation, ensuring the tool cannot affect your host machine.
+**CodeHealer** is an autonomous Python repair assistant that runs entirely inside an isolated
+Docker container. Supply a zipped Python project, and it builds a sandboxed environment,
+repairs the code, and hands back a fixed archive—no manual debugging required.
 
-Zero Host Dependencies (Almost!): The tool only requires Python and a running Docker daemon on your host machine. All project-specific dependencies are handled inside the container.
+---
 
-Zip-In, Zip-Out Workflow: Designed for portability and ease-of-use. You provide a .zip file of the buggy code and get back a _fixed.zip file.
+## 🚀 Highlights
+- **Container-first safety** – All healing happens inside the `codehealer-agent` Docker image.
+- **Bring-your-own project** – Feed in any zipped Python repository and get a patched version back.
+- **Minimal host setup** – You only need Python 3.10+, Docker, and an OpenAI API key.
+- **Zip-in / Zip-out workflow** – Perfect for CI pipelines and reproducible fixes.
 
-Fully Autonomous: Automatically discovers dependencies, entry points, and fixes both environment and runtime errors without any user configuration.
+---
 
-Lightweight & Extensible: The core agent-based architecture is preserved, making it easy to add new capabilities.
+## 🧱 Architecture at a Glance
+| Layer | What happens there? |
+| --- | --- |
+| **Host Orchestrator** (`main.py`) | Unzips your project, builds the Docker image, runs the container, then re-zips the healed code. |
+| **Container Runtime** (`run_in_container.py`) | Creates an internal virtual environment, analyzes the repo, applies fixes, and validates the run. |
+| **Agents & Utilities** (`codehealer/`) | The brains of the operation—specialized agents that coordinate analysis, dependency repair, and execution. |
 
-Architecture: The Host and The Container
-The new architecture creates a clean separation of concerns between a Host Orchestrator and a Containerized Healer.
+---
 
-1. Host Orchestrator (main.py)
+## 🛠️ Quickstart (6 steps)
+1. **Install prerequisites**
+   - Python 3.10 or newer
+   - Docker Engine running locally
+   - An `OPENAI_API_KEY`
 
-This script runs on your machine. It does not perform any healing itself. Its only job is to manage the Docker lifecycle.
+2. **Set up an isolated environment (optional but recommended)**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+   ```
 
-Workflow:
+3. **Install CodeHealer in editable mode**
+   ```bash
+   pip install -e .
+   ```
 
-Takes a --zip-path argument (e.g., buggy_project.zip).
+4. **Zip a sample project**
+   We include `examples/hello_codehealer/` for smoke-testing. Create an archive with the
+   Python stdlib so no extra tools are required:
+   ```bash
+   python -m zipfile -c examples/hello_codehealer_target.zip examples/hello_codehealer
+   ```
 
-Creates a temporary directory.
+5. **Point CodeHealer at the zipped project**
+   ```bash
+   export OPENAI_API_KEY="sk-your-key"
+   python main.py --zip-path examples/hello_codehealer_target.zip
+   ```
+   The first run builds the Docker image; subsequent runs reuse it.
 
-Unzips the repository into the temporary directory.
+6. **Validate the fixed project**
+   The healed archive is saved as `examples/hello_codehealer_target_fixed.zip` in the current
+   directory. Unzip it and run the target script to confirm success:
+   ```bash
+   unzip examples/hello_codehealer_target_fixed.zip -d healed_repo
+   python healed_repo/app.py
+   ```
+   Expected output:
+   ```
+   Hello from the CodeHealer target repo!
+   ```
 
-Builds the codehealer-agent Docker image from the Dockerfile.
+---
 
-Runs a new container from that image, mounting the unzipped code directory into the container's /workspace/repo.
+## 🧪 Demo Target Repository
+We include `examples/hello_codehealer/`, a minimal project used in the Quickstart walkthrough.
+Its README documents the expected output so you can quickly verify that the healed archive
+matches the intended behavior.
 
-Passes your OPENAI_API_KEY securely into the container as an environment variable.
+---
 
-Waits for the container to finish the healing process.
+## 📂 Repository Layout
+```
+.
+├── codehealer/              # Core agents, orchestration logic, and utilities
+├── examples/
+│   └── hello_codehealer/    # Sample target repo used in the quickstart
+├── main.py                  # Host-side orchestration (unzips, runs Docker, re-zips)
+├── run_in_container.py      # Container entrypoint for the healing workflow
+├── Dockerfile               # Defines the codehealer-agent runtime image
+└── pyproject.toml           # Python package metadata (only depends on `openai`)
+```
 
-Zips the now-modified code from the temporary directory into a new file (e.g., buggy_project_fixed.zip).
+---
 
-Cleans up the temporary directory and the container.
+## ❓ Troubleshooting
+- **`docker: command not found`** – Install Docker and ensure the daemon is running.
+- **`OPENAI_API_KEY` missing** – Export your key before running `main.py`.
+- **Permission errors on macOS/Linux** – Prefix Docker commands with `sudo` if your user is
+  not part of the `docker` group.
 
-2. Containerized Healer (run_in_container.py & Core Logic)
-
-This is the core healing engine that lives and runs exclusively inside the Docker container.
-
-Environment: The Dockerfile defines a clean environment with Python and the CodeHealer tool's dependencies pre-installed.
-
-Workflow:
-
-The ENTRYPOINT of the container starts the run_in_container.py script.
-
-This script receives the path to the mounted code (/workspace/repo).
-
-It instantiates the Healer orchestrator, which proceeds with the two-phase healing process (Environment & Runtime) exactly as before, but now fully isolated from your system.
-
-The SandboxManager still creates a venv, but it does so inside the container. This provides a second layer of isolation for the project's dependencies from the tool's own dependencies within the container.
-
-Usage
-Prepare your buggy project:
-Ensure your buggy Python project is in a zip file (e.g., buggy_project.zip). For this demo, you can create one from the example_repo_4 directory:
-
-# (On macOS/Linux)
-zip -r buggy_project.zip example_repo_4/
-
-# (On Windows, using PowerShell)
-Compress-Archive -Path example_repo_4\* -DestinationPath buggy_project.zip
-
-Install the package (for the host orchestrator script):
-
-pip install -e .
-
-Set your API key:
-
-export OPENAI_API_KEY='your-api-key'
-
-Run the Healer:
-Point the tool at your zipped repository. It will build the Docker image on the first run and then execute the healing process.
-
-python main.py --zip-path ./buggy_project.zip
-
-Upon completion, you will find a buggy_project_fixed.zip file in your directory.
-
+Happy healing! 🛠️
