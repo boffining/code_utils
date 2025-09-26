@@ -1,5 +1,7 @@
 import re
 import os
+from typing import Optional, Tuple
+
 from .base_agent import BaseAgent
 from ..utils.file_handler import FileHandler
 
@@ -23,7 +25,7 @@ class CodeAgent(BaseAgent):
         super().__init__(repo_path, system_prompt)
         self.file_handler = FileHandler()
 
-    def get_suggestion(self, traceback_log: str) -> tuple[str, str] | None:
+    def get_suggestion(self, traceback_log: str) -> Optional[Tuple[str, str]]:
         """Analyzes a Python traceback and suggests a code fix."""
         user_prompt = f"""
         The python script failed with the following traceback:
@@ -37,7 +39,7 @@ class CodeAgent(BaseAgent):
         response = self._query_llm(user_prompt)
         return self._parse_response(response)
 
-    def _parse_response(self, response: str) -> tuple[str, str] | None:
+    def _parse_response(self, response: str) -> Optional[Tuple[str, str]]:
         """Parses the LLM response to extract the filepath and code."""
         try:
             filepath_match = re.search(r"FILEPATH: (.+)", response)
