@@ -13,15 +13,18 @@ class CodeAgent(BaseAgent):
         You are an expert Python programmer. Your task is to fix a runtime error in a Python script.
         You will be given the source code of the file where the error occurred, and the full traceback.
         Your job is to provide the complete, corrected content of the file. Pay close attention to typos in function or variable names (e.g., `gree` instead of `greet`).
+
+        If the error is a `ModuleNotFoundError` or `ImportError`, you should try to fix it. For example, if the code has `import Path` and the error is `No module named 'Path'`, you should recognize that the user likely meant `from pathlib import Path`.
+
         If you are shown previous failed attempts, it means those solutions did not work. You must provide a DIFFERENT and CORRECT solution.
         You MUST respond in the following format:
-        
+
         FILEPATH: path/to/the/file/to/fix.py
         ```python
         # The full, corrected content of the python file goes here.
         # Make sure to include the entire file, not just the changed part.
         ```
-        
+
         The filepath must be relative to the repository root. Do not include any other text, explanations, or apologies.
         """
         super().__init__(repo_path, system_prompt)
@@ -46,7 +49,7 @@ class CodeAgent(BaseAgent):
         if not context:
             print("Could not find a relevant file in the traceback within the repository.")
             return None
-        
+
         relative_path, file_content = context
         history_prompt = ""
         if attempt_history:
@@ -93,4 +96,3 @@ class CodeAgent(BaseAgent):
         except Exception as e:
             print(f"Error parsing agent response: {e}")
             return None
-

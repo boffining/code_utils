@@ -10,11 +10,11 @@ def run_cmd(cmd, cwd):
         output.append(line)
     return proc.wait(), "".join(output)
 
-def parse_nameerror(trace):
+def parse_error(trace):
     lines = trace.splitlines()
     file_path, missing = None, None
     for i, line in enumerate(lines):
-        if "NameError:" in line:
+        if "NameError:" in line or "ModuleNotFoundError:" in line or "ImportError:" in line:
             if "'" in line:
                 missing = line.split("'")[1]
             for j in range(i-1, -1, -1):
@@ -24,9 +24,8 @@ def parse_nameerror(trace):
             break
     return file_path, missing
 
-def add_missing_import(file_path, missing):
+def apply_fix(file_path, new_code):
     code = pathlib.Path(file_path).read_text()
-    new_code = f"import {missing}\n{code}"
     diff = "".join(difflib.unified_diff(
         code.splitlines(keepends=True),
         new_code.splitlines(keepends=True),
@@ -42,6 +41,13 @@ def main():
     ap.add_argument("--workdir", required=True)
     args = ap.parse_args()
 
+    # This is a placeholder for where the CodeAgent would be instantiated
+    # In the full implementation, you would import and create an instance of CodeAgent
+    # For this example, we'll simulate the agent's output.
+    from codehealer.agents.code_agent import CodeAgent
+    code_agent = CodeAgent(args.workdir)
+
+
     repo_dir = pathlib.Path(args.workdir)
     print(f"[container] Healing repo at {repo_dir}")
 
@@ -52,16 +58,14 @@ def main():
             print("[container] ✅ Success!")
             return 0
 
-        if "NameError" in out:
-            file_path, missing = parse_nameerror(out)
-            print(f"[container] Fixing NameError: {missing} in {file_path}")
-            add_missing_import(file_path, missing)
-            continue
-
-        if "ImportError" in out:
-            print("[container] Detected ImportError. (Add pip install logic here)")
-            # Optionally run pip install inside container
-            continue
+        if "NameError" in out or "ModuleNotFoundError" in out or "ImportError" in out:
+            print(f"[container] Detected error. Consulting CodeAgent...")
+            fix = code_agent.get_suggestion(out)
+            if fix:
+                file_to_patch, new_content = fix
+                print(f"Applying suggested fix to {os.path.basename(file_to_patch)}...")
+                apply_fix(file_to_patch, new_content)
+                continue
 
         print("[container] Could not fix automatically.")
         return 1
