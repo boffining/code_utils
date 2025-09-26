@@ -1,8 +1,10 @@
-import os
+from typing import Optional
+
 
 class FileHandler:
     """Handles reading from and writing to files."""
-    def read_file(self, file_path: str) -> str | None:
+
+    def read_file(self, file_path: str) -> Optional[str]:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return f.read()

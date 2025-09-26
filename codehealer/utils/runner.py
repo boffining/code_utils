@@ -1,6 +1,6 @@
 import subprocess
 import os
-from typing import List
+from typing import List, Optional
 from .sandbox import SandboxManager
 
 class Runner:
@@ -24,7 +24,7 @@ class Runner:
         except Exception as e:
             return -1, f"Failed to execute command '{' '.join(command)}': {e}"
 
-    def find_requirements(self) -> str | None:
+    def find_requirements(self) -> Optional[str]:
         path = os.path.join(self.repo_path, 'requirements.txt')
         return path if os.path.exists(path) else None
 
@@ -36,7 +36,7 @@ class Runner:
         pip_exe = self.sandbox.get_pip_executable()
         return self._run_command([pip_exe, "install", "-r", requirements_path])
 
-    def find_entry_point(self) -> str | None:
+    def find_entry_point(self) -> Optional[str]:
         common_files = ['main.py', 'app.py', 'run.py']
         for filename in common_files:
             path = os.path.join(self.repo_path, filename)
