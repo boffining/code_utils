@@ -1,6 +1,6 @@
 import os
 import time
-from ..agents.env_agent import EnvironmentAgent
+from ..agents.environment_agent import EnvironmentAgent
 from ..agents.code_agent import CodeAgent
 from ..utils.runner import Runner
 from ..utils.file_handler import FileHandler
@@ -77,31 +77,65 @@ class Healer:
         """Ensures the main application entry point runs without crashing."""
         print("\n--- Phase 2: Resolving Runtime Errors ---")
         entry_point = self.runner.find_entry_point()
-        if not entry_point:
-            print("Could not find a main entry point (main.py, app.py).")
-            return True 
-        
-        print(f"Found entry point: {entry_point}")
+        if entry_point:
+            print(f"Found entry point: {entry_point}")
 
-        for _ in range(self.max_iterations - self.iteration):
-            self.iteration += 1
-            print(f"\n[Attempt {self.iteration}] Running application in sandbox...")
-            exit_code, log = self.runner.run_entry_point(entry_point)
+            for _ in range(self.max_iterations - self.iteration):
+                self.iteration += 1
+                print(f"\n[Attempt {self.iteration}] Running application in sandbox...")
+                exit_code, log = self.runner.run_entry_point(entry_point)
 
-            if exit_code == 0:
-                print("Application ran successfully without crashing.")
-                return True
+                if exit_code == 0:
+                    print("Application ran successfully without crashing.")
+                    return True
 
-            print("Runtime error detected. Consulting CodeAgent...")
-            fix = self.code_agent.get_suggestion(log)
+                print("Runtime error detected. Consulting CodeAgent...")
+                fix = self.code_agent.get_suggestion(log)
 
-            if not fix:
-                print("Agent could not determine a fix.")
-                return False
-            
-            file_to_patch, new_content = fix
-            print(f"Applying suggested fix to {os.path.basename(file_to_patch)}...")
-            self.file_handler.write_file(file_to_patch, new_content)
-            time.sleep(1)
-        return False
+                if not fix:
+                    print("Agent could not determine a fix.")
+                    return False
 
+                file_to_patch, new_content = fix
+                print(f"Applying suggested fix to {os.path.basename(file_to_patch)}...")
+                self.file_handler.write_file(file_to_patch, new_content)
+                time.sleep(1)
+            return False
+
+        print("Could not find a main entry point (main.py, app.py). Attempting package imports.")
+        packages = self.runner.discover_importable_packages()
+
+        if not packages:
+            print("No importable packages found. Skipping runtime checks.")
+            return True
+
+        print(f"Discovered importable packages: {', '.join(packages)}")
+
+        for package in packages:
+            while True:
+                if self.iteration >= self.max_iterations:
+                    print("Reached maximum iterations while importing packages.")
+                    return False
+
+                self.iteration += 1
+                print(f"\n[Attempt {self.iteration}] Importing package '{package}' in sandbox...")
+                exit_code, log = self.runner.import_package(package)
+
+                if exit_code == 0:
+                    print(f"Package '{package}' imported successfully.")
+                    break
+
+                print("Import error detected. Consulting CodeAgent...")
+                fix = self.code_agent.get_suggestion(log)
+
+                if not fix:
+                    print("Agent could not determine a fix.")
+                    return False
+
+                file_to_patch, new_content = fix
+                print(f"Applying suggested fix to {os.path.basename(file_to_patch)}...")
+                self.file_handler.write_file(file_to_patch, new_content)
+                time.sleep(1)
+
+        print("All discovered packages imported successfully.")
+        return True

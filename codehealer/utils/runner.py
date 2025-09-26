@@ -64,3 +64,14 @@ class Runner:
         """Attempt to import the given package inside the sandbox."""
         python_exe = self.sandbox.get_python_executable()
         return self._run_command([python_exe, "-c", f"import {package_name}"])
+
+    def is_pytest_installed(self) -> bool:
+        """Check if pytest is installed in the sandbox."""
+        python_exe = self.sandbox.get_python_executable()
+        exit_code, _ = self._run_command([python_exe, "-c", "import pytest"])
+        return exit_code == 0
+
+    def run_tests(self) -> tuple[int, str]:
+        """Run the pytest test suite."""
+        python_exe = self.sandbox.get_python_executable()
+        return self._run_command([python_exe, "-m", "pytest"])
