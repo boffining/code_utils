@@ -30,7 +30,11 @@ class Healer:
         the iterative loop until success or failure.
         """
         initial_state: AgentState = {
-            "healer": self,
+            "sandbox": self.sandbox,
+            "runner": self.runner,
+            "file_handler": self.file_handler,
+            "env_agent": self.env_agent,
+            "code_agent": self.code_agent,
             "iteration": 0,
             "max_iterations": self.max_iterations,
             "log": "",
